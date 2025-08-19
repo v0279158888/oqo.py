@@ -14,7 +14,7 @@
 ### 安装
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/oqo.git
+git clone https://github.com/v0279158888/oqo.py.git
 cd oqo
 
 # 设置执行权限
