@@ -284,6 +284,38 @@ class URLProcessor:
         # 去重并排序
         return sorted(list(dict.fromkeys(urls)))
     
+    def generate_raw_values(self, items: Dict[str, List[str]]) -> str:
+        """生成原始捕获值的纯文本格式"""
+        raw_sections = []
+        
+        for item_type, item_list in items.items():
+            if item_list:
+                # 去重并排序
+                unique_items = sorted(list(dict.fromkeys(item_list)))
+                if unique_items:
+                    raw_sections.append(f"{item_type.upper()}:")
+                    for item in unique_items:
+                        raw_sections.append(f"  {item.strip()}")
+                    raw_sections.append("")  # 空行分隔
+        
+        return "\n".join(raw_sections).strip()
+    
+    def get_first_value(self, items: Dict[str, List[str]]) -> Optional[str]:
+        """获取第一个捕获的值（按优先级顺序）"""
+        # 定义优先级顺序
+        priority_order = ['sr', 'cmos', 'doc', 'bug', 'jira', 'people', 'email', 'url']
+        
+        for item_type in priority_order:
+            item_list = items.get(item_type, [])
+            if item_list:
+                # 返回第一个值，去除@符号（对于people类型）
+                first_value = item_list[0].strip()
+                if item_type == 'people':
+                    first_value = first_value.lstrip('@')
+                return first_value
+        
+        return None
+    
     def validate_url(self, url: str) -> bool:
         """验证URL是否有效"""
         try:
@@ -362,9 +394,11 @@ class GoogleSearcher:
 class OQOTool:
     """Oracle Quick Open工具主类"""
     
-    def __init__(self, auto_open: bool = True):
+    def __init__(self, auto_open: bool = True, raw_capture: bool = False, one_value: bool = False):
         """初始化OQO工具"""
         self.auto_open = auto_open
+        self.raw_capture = raw_capture
+        self.one_value = one_value
         self.config = Config()
         self.platform = self._create_platform_interface()
         self.url_processor = URLProcessor(self.config)
@@ -403,27 +437,62 @@ class OQOTool:
             
             # 提取并处理项目
             items = self.url_processor.extract_items(clipboard_text)
-            urls = self.url_processor.generate_urls(items)
             
-            if urls:
-                # 复制URL到剪贴板
-                self.platform.set_clipboard("\n".join(urls))
-                
-                if self.auto_open:
-                    self._open_urls(urls)
-                    message = f'打开成功 >> {len(urls)} << 个项目\n已复制到剪贴板'
+            if self.one_value:
+                # 单值模式：只显示第一个捕获的值
+                first_value = self.url_processor.get_first_value(items)
+                if first_value:
+                    self.platform.set_clipboard(first_value)
+                    message = f'已提取第一个值: {first_value}'
+                    self.platform.send_notification(message)
+                    logging.info(message)
+                    
+                    # 打印第一个值
+                    print(first_value)
                 else:
-                    message = f'已提取 >> {len(urls)} << 个项目到剪贴板'
-                
-                self.platform.send_notification(message)
-                logging.info(message)
-                
-                # 打印提取的项目统计
-                self._print_extraction_summary(items)
+                    self.platform.send_notification("未找到匹配的项目")
+                    logging.info("未找到匹配的项目")
+            elif self.raw_capture:
+                # 原始捕获模式：只显示纯文本值
+                raw_text = self.url_processor.generate_raw_values(items)
+                if raw_text:
+                    self.platform.set_clipboard(raw_text)
+                    message = f'已提取 >> {sum(len(items.get(k, [])) for k in items.keys())} << 个原始值到剪贴板'
+                    self.platform.send_notification(message)
+                    logging.info(message)
+                    
+                    # 打印原始值
+                    print("\n" + "="*60)
+                    print("提取的原始值:")
+                    print("="*60)
+                    print(raw_text)
+                    print("="*60)
+                else:
+                    self.platform.send_notification("未找到匹配的项目")
+                    logging.info("未找到匹配的项目")
             else:
-                # 执行Google搜索
-                self.google_searcher.search(clipboard_text)
-                logging.info("执行Google搜索")
+                # 正常模式：生成URL
+                urls = self.url_processor.generate_urls(items)
+                
+                if urls:
+                    # 复制URL到剪贴板
+                    self.platform.set_clipboard("\n".join(urls))
+                    
+                    if self.auto_open:
+                        self._open_urls(urls)
+                        message = f'打开成功 >> {len(urls)} << 个项目\n已复制到剪贴板'
+                    else:
+                        message = f'已提取 >> {len(urls)} << 个项目到剪贴板'
+                    
+                    self.platform.send_notification(message)
+                    logging.info(message)
+                    
+                    # 打印提取的项目统计
+                    self._print_extraction_summary(items)
+                else:
+                    # 执行Google搜索
+                    self.google_searcher.search(clipboard_text)
+                    logging.info("执行Google搜索")
                 
         except Exception as e:
             logging.error(f"程序运行出错: {str(e)}")
@@ -474,6 +543,10 @@ def main():
     parser = argparse.ArgumentParser(description='Oracle Quick Open Tool')
     parser.add_argument('--no-open', action='store_true',
                       help='只提取URL而不自动打开浏览器')
+    parser.add_argument('--raw-capture', action='store_true',
+                      help='只显示原始捕获值，不转换为URL格式')
+    parser.add_argument('--one-value', action='store_true',
+                      help='只显示第一个捕获的值，无额外文本')
     parser.add_argument('--debug', action='store_true',
                       help='启用调试模式')
     
@@ -484,7 +557,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     
     try:
-        oqo = OQOTool(auto_open=not args.no_open)
+        oqo = OQOTool(auto_open=not args.no_open, raw_capture=args.raw_capture, one_value=args.one_value)
         oqo.run()
     except KeyboardInterrupt:
         print("\n程序被用户中断")
