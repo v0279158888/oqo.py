@@ -57,7 +57,7 @@ python3 oqo.py --no-open
 python3 oqo.py --debug
 ```
 
-## �� 支持格式
+## 支持格式
 
 | 类型 | 格式 | 示例 |
 |------|------|------|
