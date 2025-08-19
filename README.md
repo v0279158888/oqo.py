@@ -15,7 +15,7 @@
 ```bash
 # 克隆仓库
 git clone https://github.com/v0279158888/oqo.py.git
-cd oqo.py
+cd oqo
 
 # 设置执行权限
 chmod +x oqo.py
@@ -52,6 +52,12 @@ python3 oqo.py
 
 # 只提取URL，不打开浏览器
 python3 oqo.py --no-open
+
+# 只显示原始捕获值，不转换为URL格式
+python3 oqo.py --raw-capture
+
+# 只显示第一个捕获的值，无额外文本
+python3 oqo.py --one-value
 
 # 调试模式
 python3 oqo.py --debug
