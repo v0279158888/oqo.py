@@ -15,7 +15,7 @@
 ```bash
 # 克隆仓库
 git clone https://github.com/v0279158888/oqo.py.git
-cd oqo
+cd oqo.py
 
 # 设置执行权限
 chmod +x oqo.py
