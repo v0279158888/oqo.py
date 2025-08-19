@@ -78,7 +78,8 @@ python3 oqo.py --debug
 
 - **权限问题**: `chmod +x oqo.py`
 - **剪贴板**: 确保安装了 `xsel` 或 `xclip` (Linux)
-- **浏览器**: 需要安装Google Chrome
+- **浏览器**: 需要安装Google Chrome,
+- **MacOS Chrome**: Enable JavaScript `View` → `Developer` → `Allow JavaScript from Apple Events`
 
 ## 许可证
 
