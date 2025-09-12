@@ -270,7 +270,7 @@ class URLProcessor:
         # Email GRP URLs (Group Schedule)
         for email in items.get('email', []):
             grp_url = (f"{self.config.GRP_PREFIX}"
-                      f"searchTerm={email.strip().upper()}"
+                      f"{email.strip().upper()}"
                       f"&fromDate={self.date_key1}&toDate={self.date_key2}")
             urls.append(grp_url)
         
